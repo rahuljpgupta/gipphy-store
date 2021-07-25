@@ -1,23 +1,95 @@
-import logo from './logo.svg';
+import { useEffect, useState } from "react";
+import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
+import { SyncLoader } from 'react-spinners';
+import debounce from 'lodash/debounce';
+import throttle from "lodash/throttle";
+import "isomorphic-fetch";
+import Gif from './components/Gif';
+import Header from './components/Header';
+import { fetchGifs, searchGifs } from "./helpers/gipphyApi";
+import {
+  COLUMNS_COUNTS_BREAK_POINTS,
+  TEXT_SEARCH_WAIT,
+  TEXT_SEARCH_MAX_WAIT,
+  GIPPHY_COUNT_PER_REQUEST,
+  TIME_BEFORE_NEXT_FETCH,
+} from './constants';
 import './App.css';
 
 function App() {
+  const [gifs, setGifs] = useState(null);
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [offSet, setOffSet] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
+
+  function scrollHandler() {
+    const documentElement = document.documentElement;
+    const offset = documentElement.scrollTop + window.innerHeight;
+    const height = documentElement.offsetHeight;
+
+    if (!searchText && offset >= height) {
+      setIsLoading(true);
+      throttle(() => {
+        fetchGifs(offSet + GIPPHY_COUNT_PER_REQUEST).then(res => {
+        setGifs(gifs.concat(res.data));
+        setOffSet(offSet + GIPPHY_COUNT_PER_REQUEST);
+        setIsLoading(false);
+      }).catch(err => console.log(err));
+    }, TIME_BEFORE_NEXT_FETCH)();
+    }
+  }
+
+  useEffect(() => {
+    fetchGifs(offSet).then(res => {
+      setGifs(res.data);
+      setIsLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('scroll', scrollHandler);
+    
+    return () => {
+      document.removeEventListener('scroll', scrollHandler);
+    }
+  });
+
+  function handleSearch(e) {
+    const text = e.target.value;
+    setSearchText(text);
+    const debouncedSearch = debounce((text) => {
+        searchGifs(text).then(res => {
+        setGifs(res.data);
+      }).catch(err => console.log(err));
+    }, TEXT_SEARCH_WAIT, {maxWait: TEXT_SEARCH_MAX_WAIT, trailing: true});
+    if(text) {
+      debouncedSearch(text)
+    } else {
+      debouncedSearch.cancel();
+      fetchGifs(0).then(res => {
+        setGifs(res.data);
+        setOffSet(GIPPHY_COUNT_PER_REQUEST);
+      });
+    }
+  } 
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className={`App ${isDarkTheme ? 'dark' : ''}`}>
+      <Header
+        isDarkTheme={isDarkTheme}
+        setIsDarkTheme={setIsDarkTheme}
+        searchText={searchText}
+        handleSearch={handleSearch}
+      />
+      <ResponsiveMasonry
+        columnsCountBreakPoints={COLUMNS_COUNTS_BREAK_POINTS}
+      >
+        <Masonry>
+          {gifs && gifs.map(gif => <Gif key={gif.id} gif={gif} />)}
+        </Masonry>
+      </ResponsiveMasonry>
+      {isLoading && <SyncLoader />}
     </div>
   );
 }
