@@ -5,7 +5,12 @@ export default function Gif(props) {
   const { gif: {images: {fixed_width: gif, fixed_width_still: gifStill}}, title } = props;
 
   return (
-    <div className="Gif" style={{width: gif.width, height: gif.height}} onClick={() => setIsPaused(!isPaused)}>
+    <div
+      className="Gif"
+      style={{width: gif.width, height: gif.height, cursor: 'pointer'}}
+      onClick={() => setIsPaused(!isPaused)}
+      title={`Click to ${isPaused ? 'play' : 'pause'}`}
+    >
       {isPaused? (
         <>
           <img src={gifStill.url} alt={title} />
