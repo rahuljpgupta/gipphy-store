@@ -1,7 +1,5 @@
 .App {
   text-align: center;
-  margin-left: 15px;
-  margin-right: 15px;
 }
 
 .dark {
@@ -11,6 +9,8 @@
 .header {
   display: flex;
   justify-content: space-between;
+  margin-left: 15px;
+  margin-right: 15px;
 }
 
 .theme-button {
@@ -22,4 +22,8 @@
   height: 45px;
   width: 300px;
   margin-top: 15px;
+}
+
+.responsive-grid {
+  margin-left: 40px;
 }

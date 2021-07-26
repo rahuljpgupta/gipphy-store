@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import { SyncLoader } from 'react-spinners';
-import debounce from 'lodash/debounce';
 import throttle from "lodash/throttle";
 import "isomorphic-fetch";
 import Gif from './components/Gif';
@@ -10,7 +9,6 @@ import { fetchGifs, searchGifs } from "./helpers/gipphyApi";
 import {
   COLUMNS_COUNTS_BREAK_POINTS,
   TEXT_SEARCH_WAIT,
-  TEXT_SEARCH_MAX_WAIT,
   GIPPHY_COUNT_PER_REQUEST,
   TIME_BEFORE_NEXT_FETCH,
 } from './constants';
@@ -22,6 +20,7 @@ function App() {
   const [offSet, setOffSet] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
+  const [searchTimeoutId, setSearchTimeoutId] = useState();
 
   function scrollHandler() {
     const documentElement = document.documentElement;
@@ -58,21 +57,22 @@ function App() {
   function handleSearch(e) {
     const text = e.target.value;
     setSearchText(text);
-    const debouncedSearch = debounce((text) => {
+    clearTimeout(searchTimeoutId);
+
+    if(text) {
+      const timeoutId = setTimeout(() => {
         searchGifs(text).then(res => {
         setGifs(res.data);
       }).catch(err => console.log(err));
-    }, TEXT_SEARCH_WAIT, {maxWait: TEXT_SEARCH_MAX_WAIT, trailing: true});
-    if(text) {
-      debouncedSearch(text)
+    }, TEXT_SEARCH_WAIT);
+    setSearchTimeoutId(timeoutId)
     } else {
-      debouncedSearch.cancel();
       fetchGifs(0).then(res => {
         setGifs(res.data);
         setOffSet(GIPPHY_COUNT_PER_REQUEST);
       });
     }
-  } 
+  }
 
   return (
     <div className={`App ${isDarkTheme ? 'dark' : ''}`}>
@@ -83,6 +83,7 @@ function App() {
         handleSearch={handleSearch}
       />
       <ResponsiveMasonry
+        className="responsive-grid"
         columnsCountBreakPoints={COLUMNS_COUNTS_BREAK_POINTS}
       >
         <Masonry>
